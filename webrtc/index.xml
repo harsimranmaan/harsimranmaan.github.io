@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8" ?> 
+<Module specificationVersion='2'>
+  <ModulePrefs title="Meeting Room" height="250">
+        <Require feature="wave"/>
+        <Require feature="dynamic-height"/>
+        <Require feature="minimessage"/>
+    </ModulePrefs>
+    <Content type="html" href="index.html"/>
+</Module>
