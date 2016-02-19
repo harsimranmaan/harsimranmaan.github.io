@@ -195,7 +195,7 @@ function stateChangeHandler() {
   descriptions = state.get('descriptions', candidates)
 
   //only if changed
-  if (candidates != candidates) {
+  //if (candidates != candidates) {
     for (var property in candidates) {
       if (candidates.hasOwnProperty(property) && property != me) {
         remotePeerConnection.addIceCandidate(new RTCIceCandidate(candidates[property]));
@@ -203,8 +203,8 @@ function stateChangeHandler() {
         break; // No conference
       }
     }
-  }
-  if (descriptions != descriptions) {
+  //}
+  //if (descriptions != descriptions) {
     for (var property in descriptions) {
       if (descriptions.hasOwnProperty(property) && property != me) {
         remotePeerConnection.setRemoteDescription(descriptions[property]);
@@ -213,7 +213,7 @@ function stateChangeHandler() {
         break; // No conference
       }
     }
-  }
+  //}
   console.log(" state users: ", users)
   console.log(" state candidates: ", candidates)
   console.log(" state descriptions: ", descriptions)
