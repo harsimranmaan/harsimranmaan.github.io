@@ -76,33 +76,31 @@ function call() {
   }
 
   var servers = {
-    "iceServers": [
-      {
-        url: 'stun:stun.iptel.org'
-      }, {
-        url: 'stun:stun.rixtelecom.se'
-      }, {
-        url: 'stun:stun.schlund.de'
-      }, {
-        url: 'stun:stun.l.google.com:19302'
-      }, {
-        url: 'stun:stun1.l.google.com:19302'
-      }, {
-        url: 'stun:stun2.l.google.com:19302'
-      }, {
-        url: 'stun:stun3.l.google.com:19302'
-      }, {
-        url: 'stun:stun4.l.google.com:19302'
-      }, {
-        url: 'stun:stunserver.org'
-      }, {
-        url: 'stun:stun.voxgratia.org'
-      }, {
-        url: 'turn:numb.viagenie.ca',
-        credential: 'muazkh',
-        username: 'webrtc@live.com'
-      }
-    ]
+    "iceServers": [{
+      url: 'stun:stun.iptel.org'
+    }, {
+      url: 'stun:stun.rixtelecom.se'
+    }, {
+      url: 'stun:stun.schlund.de'
+    }, {
+      url: 'stun:stun.l.google.com:19302'
+    }, {
+      url: 'stun:stun1.l.google.com:19302'
+    }, {
+      url: 'stun:stun2.l.google.com:19302'
+    }, {
+      url: 'stun:stun3.l.google.com:19302'
+    }, {
+      url: 'stun:stun4.l.google.com:19302'
+    }, {
+      url: 'stun:stunserver.org'
+    }, {
+      url: 'stun:stun.voxgratia.org'
+    }, {
+      url: 'turn:numb.viagenie.ca',
+      credential: 'muazkh',
+      username: 'webrtc@live.com'
+    }]
   };
 
   localPeerConnection =
@@ -201,6 +199,7 @@ function stateChangeHandler() {
     for (var property in candidates) {
       if (candidates.hasOwnProperty(property) && property != me) {
         remotePeerConnection.addIceCandidate(new RTCIceCandidate(candidates[property]));
+        console.log("Setting remote candidate", candidates[property])
         break; // No conference
       }
     }
@@ -210,6 +209,7 @@ function stateChangeHandler() {
       if (descriptions.hasOwnProperty(property) && property != me) {
         remotePeerConnection.setRemoteDescription(descriptions[property]);
         remotePeerConnection.createAnswer(gotRemoteDescription);
+        console.log("Setting remote description", descriptions[property])
         break; // No conference
       }
     }
