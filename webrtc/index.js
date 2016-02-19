@@ -69,9 +69,9 @@ endMeetingButton.disabled = true;
 function startMeeting() {
   if (wave != null) {
     wave.getState().submitDelta({
-      'candidates': [],
+      'candidates': {},
       'users': [],
-      'descriptions': []
+      'descriptions': {}
     })
     candidates = {};
     descriptions = {};
@@ -87,6 +87,7 @@ function startMeeting() {
     remotePeerConnection.onicecandidate = gotRemoteIceCandidate;
     remotePeerConnection.onaddstream = gotRemoteStream;
     startMeetingButton.disabled = true;
+    startButton.disabled = false;
   }
 }
 
@@ -95,6 +96,7 @@ function endMeeting() {
   if (wave != null) {
     endMeetingButton.disabled = true;
     startMeetingButton.disabled = false;
+    startButton.disabled = true;
   }
 }
 
@@ -150,7 +152,8 @@ function gotLocalDescription(description) {
   localPeerConnection.setLocalDescription(description);
   trace('Offer from localPeerConnection: \n' + description.sdp);
   if (wave != null) {
-    descriptions[me] = description
+    descriptions[me] = descriptions[me] || [];
+    descriptions[me].push(description);
     wave.getState().submitDelta({
       'descriptions': descriptions
     });
@@ -183,7 +186,8 @@ function gotRemoteStream(event) {
 function gotLocalIceCandidate(event) {
   if (event.candidate) {
     if (wave != null) {
-      candidates[me] = event.candidate
+      candidates[me] = candidates[me] || [];
+      candidates[me].push(event.candidate);
       wave.getState().submitDelta({
         'candidates': candidates
       });
@@ -208,41 +212,43 @@ function stateChangeHandler() {
   if (!wave.getState() || !wave.getViewer()) {
     return;
   }
-  startButton.disabled = false;
+  
   me = wave.getViewer().getId();
-  if (me && users.indexOf(me) < 0) {
+  if (users.indexOf(me) < 0) {
     users.push(me);
     wave.getState().submitDelta({
       'users': users
     });
+    startMeetingButton.disabled = true;
+    endMeetingButton.disabled = false;
   }
   var state = wave.getState();
-  users = state.get('users', users);
-  candidates = state.get('candidates', candidates)
-  descriptions = state.get('descriptions', candidates)
+  users = state.get('users', users) || [];
+  candidates = state.get('candidates', candidates) || {};
+  descriptions = state.get('descriptions', descriptions) || {};
 
   //only if started
-  if (startButton.disabled) {
+  if (users[me]) {
     for (var property in candidates) {
-      if (candidates.hasOwnProperty(property) && property != me && remotePeerConnection) {
-        remotePeerConnection.addIceCandidate(new RTCIceCandidate(candidates[property]));
+      if (candidates.hasOwnProperty(property) && property != me && remotePeerConnection && candidates[property].length) {
+        remotePeerConnection.addIceCandidate(new RTCIceCandidate(candidates[property][candidates[property].length - 1]));
         console.log("Setting remote candidate", candidates[property])
         break; // No conference
       }
     }
 
     for (var property in descriptions) {
-      if (descriptions.hasOwnProperty(property) && property != me && remotePeerConnection) {
-        remotePeerConnection.setRemoteDescription(new RTCSessionDescription(descriptions[property]));
+      if (descriptions.hasOwnProperty(property) && property != me && remotePeerConnection && descriptions[property].length) {
+        remotePeerConnection.setRemoteDescription(new RTCSessionDescription(descriptions[property][descriptions[property].length - 1]));
         remotePeerConnection.createAnswer(gotRemoteDescription);
         console.log("Setting remote description", descriptions[property])
         break; // No conference
       }
     }
   }
-  console.log(" state users: ", users)
-  console.log(" state candidates: ", candidates)
-  console.log(" state descriptions: ", descriptions)
+  console.log(" state users: ", users);
+  console.log(" state candidates: ", candidates);
+  console.log(" state descriptions: ", descriptions);
 }
 
 
