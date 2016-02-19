@@ -136,28 +136,28 @@ function stateChangeHandler() {
     return;
   }
   var state = wave.getState();
-  users = state.get('users','[]')
+  users = state.get('users', '[]')
   console.log("users: ", users)
 }
 
-// function partcipantChangeHandler() {
-//   // Get state
-//   if (!wave.getState()) {
-//     return;
-//   }
-//   var state = wave.getState();
-// }
+function partcipantChangeHandler() {
+  me = wave.getViewer().getId();
+  if (users.indexOf(me) < 0) {
+    users.push(me);
+  }
+  wave.getState().submitDelta({
+    users: users
+  });
+}
 
 
 function init() {
   if (wave && wave.isInWaveContainer()) {
     // Loads the gadget's initial state and the subsequent changes to it
     wave.setStateCallback(stateChangeHandler);
-    me = wave.getViewer().getId();
-    users.push(me);
-    wave.getState().submitDelta({users:users})
+
     // Loads participants and any changes to them
-    //wave.setParticipantCallback(partcipantChangeHandler);
+    wave.setParticipantCallback(partcipantChangeHandler);
     console.log("wave state loaded")
   }
 
