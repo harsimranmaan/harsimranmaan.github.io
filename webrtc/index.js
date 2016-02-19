@@ -7,7 +7,7 @@ var descriptions = {};
 var me = null;
 var localVideo = document.getElementById('localVideo');
 var remoteVideo = document.getElementById('remoteVideo');
-
+var initComplete = false;
 var servers = {
   "iceServers": [{
     url: 'stun:stun.iptel.org'
@@ -62,43 +62,20 @@ startButton.onclick = start;
 callButton.onclick = call;
 hangupButton.onclick = hangup;
 stopButton.onclick = stop;
-startMeetingButton.onclick = startMeeting;
-endMeetingButton.onclick = endMeeting;
-endMeetingButton.disabled = true;
+// startMeetingButton.onclick = startMeeting;
+// endMeetingButton.onclick = endMeeting;
+// endMeetingButton.disabled = true;
 
-function startMeeting() {
-  if (wave != null) {
-    wave.getState().submitDelta({
-      'candidates': {},
-      'users': [],
-      'descriptions': {}
-    })
-    candidates = {};
-    descriptions = {};
-    users = [];
-    localPeerConnection =
-      new RTCPeerConnection(servers); // eslint-disable-line new-cap
-    trace('Created local peer connection object localPeerConnection');
-    localPeerConnection.onicecandidate = gotLocalIceCandidate;
 
-    remotePeerConnection =
-      new RTCPeerConnection(servers); // eslint-disable-line new-cap
-    trace('Created remote peer connection object remotePeerConnection');
-    remotePeerConnection.onicecandidate = gotRemoteIceCandidate;
-    remotePeerConnection.onaddstream = gotRemoteStream;
-    startMeetingButton.disabled = true;
-    startButton.disabled = false;
-  }
-}
 
-function endMeeting() {
-  startMeeting();
-  if (wave != null) {
-    endMeetingButton.disabled = true;
-    startMeetingButton.disabled = false;
-    startButton.disabled = true;
-  }
-}
+// function endMeeting() {
+//   startMeeting();
+//   if (wave != null) {
+//     endMeetingButton.disabled = true;
+//     startMeetingButton.disabled = false;
+//     startButton.disabled = true;
+//   }
+// }
 
 function gotStream(stream) {
   trace('Received local stream');
@@ -212,15 +189,35 @@ function stateChangeHandler() {
   if (!wave.getState() || !wave.getViewer()) {
     return;
   }
-  
+  if (!initComplete) {
+    wave.getState().submitDelta({
+      'candidates': {},
+      'users': [],
+      'descriptions': {}
+    })
+    candidates = {};
+    descriptions = {};
+    users = [];
+    localPeerConnection =
+      new RTCPeerConnection(servers); // eslint-disable-line new-cap
+    trace('Created local peer connection object localPeerConnection');
+    localPeerConnection.onicecandidate = gotLocalIceCandidate;
+
+    remotePeerConnection =
+      new RTCPeerConnection(servers); // eslint-disable-line new-cap
+    trace('Created remote peer connection object remotePeerConnection');
+    remotePeerConnection.onicecandidate = gotRemoteIceCandidate;
+    remotePeerConnection.onaddstream = gotRemoteStream;
+    startButton.disabled = false;
+    initComplete = true
+    return
+  }
   me = wave.getViewer().getId();
   if (users.indexOf(me) < 0) {
     users.push(me);
     wave.getState().submitDelta({
       'users': users
     });
-    startMeetingButton.disabled = true;
-    endMeetingButton.disabled = false;
   }
   var state = wave.getState();
   users = state.get('users', users) || [];
@@ -231,8 +228,10 @@ function stateChangeHandler() {
   if (users[me]) {
     for (var property in candidates) {
       if (candidates.hasOwnProperty(property) && property != me && remotePeerConnection && candidates[property].length) {
-        remotePeerConnection.addIceCandidate(new RTCIceCandidate(candidates[property][candidates[property].length - 1]));
-        console.log("Setting remote candidate", candidates[property])
+        for (var c in candidates[property]) {
+          remotePeerConnection.addIceCandidate(new RTCIceCandidate(candidates[property][candidates[property].length - 1]));
+          console.log("Setting remote candidate", candidates[property])
+        }
         break; // No conference
       }
     }
