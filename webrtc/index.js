@@ -137,6 +137,7 @@ function stateChangeHandler() {
   }
   var state = wave.getState();
   users = state.get('users','[]')
+  console.log("users: ", users)
 }
 
 // function partcipantChangeHandler() {
