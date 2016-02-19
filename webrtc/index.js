@@ -10,25 +10,11 @@ var remoteVideo = document.getElementById('remoteVideo');
 var initComplete = false;
 var servers = {
   "iceServers": [{
-    url: 'stun:stun.iptel.org'
-  }, {
-    url: 'stun:stun.rixtelecom.se'
-  }, {
-    url: 'stun:stun.schlund.de'
-  }, {
     url: 'stun:stun.l.google.com:19302'
   }, {
     url: 'stun:stun1.l.google.com:19302'
   }, {
-    url: 'stun:stun2.l.google.com:19302'
-  }, {
-    url: 'stun:stun3.l.google.com:19302'
-  }, {
-    url: 'stun:stun4.l.google.com:19302'
-  }, {
     url: 'stun:stunserver.org'
-  }, {
-    url: 'stun:stun.voxgratia.org'
   }, {
     url: 'turn:numb.viagenie.ca',
     credential: 'muazkh',
@@ -48,20 +34,20 @@ remoteVideo.addEventListener('loadedmetadata', function() {
     'px,  videoHeight: ' + this.videoHeight + 'px');
 });
 
-var startButton = document.getElementById('startButton');
+//var startButton = document.getElementById('startButton');
 var callButton = document.getElementById('callButton');
 var hangupButton = document.getElementById('hangupButton');
-var stopButton = document.getElementById('stopButton');
-var startMeetingButton = document.getElementById('startMeetingButton');
-var endMeetingButton = document.getElementById('endMeetingButton');
-startButton.disabled = true;
-stopButton.disabled = true;
+//var stopButton = document.getElementById('stopButton');
+//var startMeetingButton = document.getElementById('startMeetingButton');
+//var endMeetingButton = document.getElementById('endMeetingButton');
+//startButton.disabled = true;
+//stopButton.disabled = true;
 callButton.disabled = true;
 hangupButton.disabled = true;
-startButton.onclick = start;
+//startButton.onclick = start;
 callButton.onclick = call;
 hangupButton.onclick = hangup;
-stopButton.onclick = stop;
+//stopButton.onclick = stop;
 // startMeetingButton.onclick = startMeeting;
 // endMeetingButton.onclick = endMeeting;
 // endMeetingButton.disabled = true;
@@ -88,13 +74,7 @@ function start() {
   trace('Requesting local stream');
   startButton.disabled = true;
   stopButton.disabled = false;
-  navigator.getUserMedia({
-      video: true,
-      audio: true
-    }, gotStream,
-    function(error) {
-      trace('navigator.getUserMedia error: ', error);
-    });
+
 }
 
 function stop() {
@@ -118,7 +98,16 @@ function call() {
   if (localStream.getAudioTracks().length > 0) {
     trace('Using audio device: ' + localStream.getAudioTracks()[0].label);
   }
+  localPeerConnection =
+    new RTCPeerConnection(servers); // eslint-disable-line new-cap
+  trace('Created local peer connection object localPeerConnection');
+  localPeerConnection.onicecandidate = gotLocalIceCandidate;
 
+  remotePeerConnection =
+    new RTCPeerConnection(servers); // eslint-disable-line new-cap
+  trace('Created remote peer connection object remotePeerConnection');
+  remotePeerConnection.onicecandidate = gotRemoteIceCandidate;
+  remotePeerConnection.onaddstream = gotRemoteStream;
 
   localPeerConnection.addStream(localStream);
   trace('Added localStream to localPeerConnection');
@@ -181,8 +170,6 @@ function gotRemoteIceCandidate(event) {
   }
 }
 
-
-
 // Renders the gadget
 function stateChangeHandler() {
   // Get state
@@ -198,17 +185,8 @@ function stateChangeHandler() {
     candidates = {};
     descriptions = {};
     users = [];
-    localPeerConnection =
-      new RTCPeerConnection(servers); // eslint-disable-line new-cap
-    trace('Created local peer connection object localPeerConnection');
-    localPeerConnection.onicecandidate = gotLocalIceCandidate;
-
-    remotePeerConnection =
-      new RTCPeerConnection(servers); // eslint-disable-line new-cap
-    trace('Created remote peer connection object remotePeerConnection');
-    remotePeerConnection.onicecandidate = gotRemoteIceCandidate;
-    remotePeerConnection.onaddstream = gotRemoteStream;
-    startButton.disabled = false;
+    callButton.disabled = false;
+    //start();
     initComplete = true
     return
   }
@@ -259,6 +237,14 @@ function init() {
     wave.setParticipantCallback(stateChangeHandler);
     console.log("wave state loaded")
   }
+  // Get user's media stream
+  navigator.getUserMedia({
+      video: true,
+      audio: true
+    }, gotStream,
+    function(error) {
+      trace('navigator.getUserMedia error: ', error);
+    });
 
 }
 // Initializes gadget after receiving a notification that the page is loaded and the DOM is ready.
