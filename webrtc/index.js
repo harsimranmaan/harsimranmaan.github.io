@@ -36,17 +36,6 @@ var servers = {
   }]
 };
 
-
-localPeerConnection =
-  new RTCPeerConnection(servers); // eslint-disable-line new-cap
-trace('Created local peer connection object localPeerConnection');
-localPeerConnection.onicecandidate = gotLocalIceCandidate;
-
-remotePeerConnection =
-  new RTCPeerConnection(servers); // eslint-disable-line new-cap
-trace('Created remote peer connection object remotePeerConnection');
-remotePeerConnection.onicecandidate = gotRemoteIceCandidate;
-remotePeerConnection.onaddstream = gotRemoteStream;
 localVideo.addEventListener('loadedmetadata', function() {
   trace('Local video currentSrc: ' + this.currentSrc +
     ', videoWidth: ' + this.videoWidth +
@@ -63,6 +52,8 @@ var startButton = document.getElementById('startButton');
 var callButton = document.getElementById('callButton');
 var hangupButton = document.getElementById('hangupButton');
 var stopButton = document.getElementById('stopButton');
+var startMeetingButton = document.getElementById('startMeetingButton');
+var endMeetingButton = document.getElementById('endMeetingButton');
 startButton.disabled = true;
 stopButton.disabled = true;
 callButton.disabled = true;
@@ -71,6 +62,41 @@ startButton.onclick = start;
 callButton.onclick = call;
 hangupButton.onclick = hangup;
 stopButton.onclick = stop;
+startMeetingButton.onclick = startMeeting;
+endMeetingButton.onclick = endMeeting;
+endMeetingButton.disabled = true;
+
+function startMeeting() {
+  if (wave != null) {
+    wave.getState().submitDelta({
+      'candidates': [],
+      'users': [],
+      'descriptions': []
+    })
+    candidates = {};
+    descriptions = {};
+    users = [];
+    localPeerConnection =
+      new RTCPeerConnection(servers); // eslint-disable-line new-cap
+    trace('Created local peer connection object localPeerConnection');
+    localPeerConnection.onicecandidate = gotLocalIceCandidate;
+
+    remotePeerConnection =
+      new RTCPeerConnection(servers); // eslint-disable-line new-cap
+    trace('Created remote peer connection object remotePeerConnection');
+    remotePeerConnection.onicecandidate = gotRemoteIceCandidate;
+    remotePeerConnection.onaddstream = gotRemoteStream;
+    startMeetingButton.disabled = true;
+  }
+}
+
+function endMeeting() {
+  startMeeting();
+  if (wave != null) {
+    endMeetingButton.disabled = true;
+    startMeetingButton.disabled = false;
+  }
+}
 
 function gotStream(stream) {
   trace('Received local stream');
@@ -198,7 +224,7 @@ function stateChangeHandler() {
   //only if started
   if (startButton.disabled) {
     for (var property in candidates) {
-      if (candidates.hasOwnProperty(property) && property != me) {
+      if (candidates.hasOwnProperty(property) && property != me && remotePeerConnection) {
         remotePeerConnection.addIceCandidate(new RTCIceCandidate(candidates[property]));
         console.log("Setting remote candidate", candidates[property])
         break; // No conference
@@ -206,7 +232,7 @@ function stateChangeHandler() {
     }
 
     for (var property in descriptions) {
-      if (descriptions.hasOwnProperty(property) && property != me && descriptions[property] != null) {
+      if (descriptions.hasOwnProperty(property) && property != me && remotePeerConnection) {
         remotePeerConnection.setRemoteDescription(new RTCSessionDescription(descriptions[property]));
         remotePeerConnection.createAnswer(gotRemoteDescription);
         console.log("Setting remote description", descriptions[property])
