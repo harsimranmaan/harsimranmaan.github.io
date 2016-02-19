@@ -2,6 +2,7 @@ var localStream;
 var localPeerConnection;
 var remotePeerConnection;
 var users = [];
+var candidates = {};
 var me = null;
 var localVideo = document.getElementById('localVideo');
 var remoteVideo = document.getElementById('remoteVideo');
@@ -21,19 +22,15 @@ remoteVideo.addEventListener('loadedmetadata', function() {
 var startButton = document.getElementById('startButton');
 var callButton = document.getElementById('callButton');
 var hangupButton = document.getElementById('hangupButton');
-startButton.disabled = false;
+var stopButton = document.getElementById('stopButton');
+startButton.disabled = true;
+stopButton.disabled = true;
 callButton.disabled = true;
 hangupButton.disabled = true;
 startButton.onclick = start;
 callButton.onclick = call;
 hangupButton.onclick = hangup;
-
-var total = '';
-
-function trace(text) {
-  total += text;
-  console.log((window.performance.now() / 1000).toFixed(3) + ': ' + text);
-}
+stopButton.onclick = stop;
 
 function gotStream(stream) {
   trace('Received local stream');
@@ -45,14 +42,24 @@ function gotStream(stream) {
 function start() {
   trace('Requesting local stream');
   startButton.disabled = true;
-  navigator.getUserMedia = navigator.getUserMedia ||
-    navigator.webkitGetUserMedia || navigator.mozGetUserMedia;
+  stopButton.disabled = false;
   navigator.getUserMedia({
-      video: true
+      video: true,
+      audio: true
     }, gotStream,
     function(error) {
       trace('navigator.getUserMedia error: ', error);
     });
+}
+
+function stop() {
+
+  startButton.disabled = false;
+  stopButton.disabled = true;
+
+  localStream.getVideoTracks()[0].stop()
+  localStream.getAudioTracks()[0].stop()
+
 }
 
 function call() {
@@ -70,12 +77,12 @@ function call() {
   var servers = null;
 
   localPeerConnection =
-    new webkitRTCPeerConnection(servers); // eslint-disable-line new-cap
+    new RTCPeerConnection(servers); // eslint-disable-line new-cap
   trace('Created local peer connection object localPeerConnection');
   localPeerConnection.onicecandidate = gotLocalIceCandidate;
 
   remotePeerConnection =
-    new webkitRTCPeerConnection(servers); // eslint-disable-line new-cap
+    new RTCPeerConnection(servers); // eslint-disable-line new-cap
   trace('Created remote peer connection object remotePeerConnection');
   remotePeerConnection.onicecandidate = gotRemoteIceCandidate;
   remotePeerConnection.onaddstream = gotRemoteStream;
@@ -100,10 +107,12 @@ function gotRemoteDescription(description) {
 
 function hangup() {
   trace('Ending call');
+  remotePeerConnection.close();
   localPeerConnection.close();
   remotePeerConnection.close();
   localPeerConnection = null;
   remotePeerConnection = null;
+  remoteVideo.src = null;
   hangupButton.disabled = true;
   callButton.disabled = false;
 }
@@ -115,7 +124,13 @@ function gotRemoteStream(event) {
 
 function gotLocalIceCandidate(event) {
   if (event.candidate) {
-    remotePeerConnection.addIceCandidate(new RTCIceCandidate(event.candidate));
+    if (wave) {
+      candidates[me] = event.candidate
+      wave.getState().submitDelta({
+        'candidates': candidates
+      });
+    }
+    //remotePeerConnection.addIceCandidate(new RTCIceCandidate(event.candidate));
     trace('Local ICE candidate: \n' + event.candidate.candidate);
   }
 }
@@ -132,23 +147,31 @@ function gotRemoteIceCandidate(event) {
 // Renders the gadget
 function stateChangeHandler() {
   // Get state
-  if (!wave.getState()) {
+  if (!wave.getState() || !wave.getViewer()) {
     return;
   }
-  var state = wave.getState();
-  users = state.get('users', '[]')
-  console.log(" state users: ", users)
-}
-
-function partcipantChangeHandler() {
+  startButton.disabled = false;
   me = wave.getViewer().getId();
-  if (users.indexOf(me) < 0) {
+  if (me && users.indexOf(me) < 0) {
     users.push(me);
+    wave.getState().submitDelta({
+      'users': users
+    });
+    console.log(" participant users: ", users)
   }
-  wave.getState().submitDelta({
-    users: users
-  });
-  console.log(" participant users: ", users)
+  var state = wave.getState();
+  users = state.get('users', users);
+  candidates = state.get('candidates', candidates)
+    //only if changed
+  if (candidates != candidates) {
+    for (var property in object) {
+      if (object.hasOwnProperty(property) && property != me) {
+        remotePeerConnection.addIceCandidate(new RTCIceCandidate(candidates[me]));
+        break; // No conference
+      }
+    }
+  }
+  console.log(" state users: ", users)
 }
 
 
@@ -156,9 +179,8 @@ function init() {
   if (wave && wave.isInWaveContainer()) {
     // Loads the gadget's initial state and the subsequent changes to it
     wave.setStateCallback(stateChangeHandler);
-
     // Loads participants and any changes to them
-    wave.setParticipantCallback(partcipantChangeHandler);
+    wave.setParticipantCallback(stateChangeHandler);
     console.log("wave state loaded")
   }
 
