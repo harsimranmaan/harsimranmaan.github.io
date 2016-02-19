@@ -3,6 +3,7 @@ var localPeerConnection;
 var remotePeerConnection;
 var users = [];
 var candidates = {};
+var descriptions = {};
 var me = null;
 var localVideo = document.getElementById('localVideo');
 var remoteVideo = document.getElementById('remoteVideo');
@@ -95,8 +96,12 @@ function call() {
 function gotLocalDescription(description) {
   localPeerConnection.setLocalDescription(description);
   trace('Offer from localPeerConnection: \n' + description.sdp);
-  remotePeerConnection.setRemoteDescription(description);
-  remotePeerConnection.createAnswer(gotRemoteDescription);
+  if (wave != null) {
+    descriptions[me] = description
+    wave.getState().submitDelta({
+      'descriptions': descriptions
+    });
+  }
 }
 
 function gotRemoteDescription(description) {
@@ -124,7 +129,7 @@ function gotRemoteStream(event) {
 
 function gotLocalIceCandidate(event) {
   if (event.candidate) {
-    if (wave) {
+    if (wave != null) {
       candidates[me] = event.candidate
       wave.getState().submitDelta({
         'candidates': candidates
@@ -162,11 +167,22 @@ function stateChangeHandler() {
   var state = wave.getState();
   users = state.get('users', users);
   candidates = state.get('candidates', candidates)
-    //only if changed
+  descriptions = state.get('descriptions', candidates)
+
+  //only if changed
   if (candidates != candidates) {
-    for (var property in object) {
-      if (object.hasOwnProperty(property) && property != me) {
+    for (var property in candidates) {
+      if (candidates.hasOwnProperty(property) && property != me) {
         remotePeerConnection.addIceCandidate(new RTCIceCandidate(candidates[me]));
+        break; // No conference
+      }
+    }
+  }
+  if (descriptions != descriptions) {
+    for (var property in descriptions) {
+      if (descriptions.hasOwnProperty(property) && property != me) {
+        remotePeerConnection.setRemoteDescription(descriptions[me]);
+        remotePeerConnection.createAnswer(gotRemoteDescription);
         break; // No conference
       }
     }
