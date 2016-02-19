@@ -200,7 +200,7 @@ function stateChangeHandler() {
   if (candidates != candidates) {
     for (var property in candidates) {
       if (candidates.hasOwnProperty(property) && property != me) {
-        remotePeerConnection.addIceCandidate(new RTCIceCandidate(candidates[me]));
+        remotePeerConnection.addIceCandidate(new RTCIceCandidate(candidates[property]));
         break; // No conference
       }
     }
@@ -208,7 +208,7 @@ function stateChangeHandler() {
   if (descriptions != descriptions) {
     for (var property in descriptions) {
       if (descriptions.hasOwnProperty(property) && property != me) {
-        remotePeerConnection.setRemoteDescription(descriptions[me]);
+        remotePeerConnection.setRemoteDescription(descriptions[property]);
         remotePeerConnection.createAnswer(gotRemoteDescription);
         break; // No conference
       }
