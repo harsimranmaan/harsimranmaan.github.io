@@ -8,6 +8,45 @@ var me = null;
 var localVideo = document.getElementById('localVideo');
 var remoteVideo = document.getElementById('remoteVideo');
 
+var servers = {
+  "iceServers": [{
+    url: 'stun:stun.iptel.org'
+  }, {
+    url: 'stun:stun.rixtelecom.se'
+  }, {
+    url: 'stun:stun.schlund.de'
+  }, {
+    url: 'stun:stun.l.google.com:19302'
+  }, {
+    url: 'stun:stun1.l.google.com:19302'
+  }, {
+    url: 'stun:stun2.l.google.com:19302'
+  }, {
+    url: 'stun:stun3.l.google.com:19302'
+  }, {
+    url: 'stun:stun4.l.google.com:19302'
+  }, {
+    url: 'stun:stunserver.org'
+  }, {
+    url: 'stun:stun.voxgratia.org'
+  }, {
+    url: 'turn:numb.viagenie.ca',
+    credential: 'muazkh',
+    username: 'webrtc@live.com'
+  }]
+};
+
+
+localPeerConnection =
+  new RTCPeerConnection(servers); // eslint-disable-line new-cap
+trace('Created local peer connection object localPeerConnection');
+localPeerConnection.onicecandidate = gotLocalIceCandidate;
+
+remotePeerConnection =
+  new RTCPeerConnection(servers); // eslint-disable-line new-cap
+trace('Created remote peer connection object remotePeerConnection');
+remotePeerConnection.onicecandidate = gotRemoteIceCandidate;
+remotePeerConnection.onaddstream = gotRemoteStream;
 localVideo.addEventListener('loadedmetadata', function() {
   trace('Local video currentSrc: ' + this.currentSrc +
     ', videoWidth: ' + this.videoWidth +
@@ -75,44 +114,6 @@ function call() {
     trace('Using audio device: ' + localStream.getAudioTracks()[0].label);
   }
 
-  var servers = {
-    "iceServers": [{
-      url: 'stun:stun.iptel.org'
-    }, {
-      url: 'stun:stun.rixtelecom.se'
-    }, {
-      url: 'stun:stun.schlund.de'
-    }, {
-      url: 'stun:stun.l.google.com:19302'
-    }, {
-      url: 'stun:stun1.l.google.com:19302'
-    }, {
-      url: 'stun:stun2.l.google.com:19302'
-    }, {
-      url: 'stun:stun3.l.google.com:19302'
-    }, {
-      url: 'stun:stun4.l.google.com:19302'
-    }, {
-      url: 'stun:stunserver.org'
-    }, {
-      url: 'stun:stun.voxgratia.org'
-    }, {
-      url: 'turn:numb.viagenie.ca',
-      credential: 'muazkh',
-      username: 'webrtc@live.com'
-    }]
-  };
-
-  localPeerConnection =
-    new RTCPeerConnection(servers); // eslint-disable-line new-cap
-  trace('Created local peer connection object localPeerConnection');
-  localPeerConnection.onicecandidate = gotLocalIceCandidate;
-
-  remotePeerConnection =
-    new RTCPeerConnection(servers); // eslint-disable-line new-cap
-  trace('Created remote peer connection object remotePeerConnection');
-  remotePeerConnection.onicecandidate = gotRemoteIceCandidate;
-  remotePeerConnection.onaddstream = gotRemoteStream;
 
   localPeerConnection.addStream(localStream);
   trace('Added localStream to localPeerConnection');
@@ -194,8 +195,8 @@ function stateChangeHandler() {
   candidates = state.get('candidates', candidates)
   descriptions = state.get('descriptions', candidates)
 
-  //only if changed
-  //if (candidates != candidates) {
+  //only if started
+  if (startButton.disabled) {
     for (var property in candidates) {
       if (candidates.hasOwnProperty(property) && property != me) {
         remotePeerConnection.addIceCandidate(new RTCIceCandidate(candidates[property]));
@@ -203,17 +204,16 @@ function stateChangeHandler() {
         break; // No conference
       }
     }
-  //}
-  //if (descriptions != descriptions) {
+
     for (var property in descriptions) {
-      if (descriptions.hasOwnProperty(property) && property != me) {
-        remotePeerConnection.setRemoteDescription(descriptions[property]);
+      if (descriptions.hasOwnProperty(property) && property != me && descriptions[property] != null) {
+        remotePeerConnection.setRemoteDescription(new RTCSessionDescription(descriptions[property]));
         remotePeerConnection.createAnswer(gotRemoteDescription);
         console.log("Setting remote description", descriptions[property])
         break; // No conference
       }
     }
-  //}
+  }
   console.log(" state users: ", users)
   console.log(" state candidates: ", candidates)
   console.log(" state descriptions: ", descriptions)
@@ -229,158 +229,6 @@ function init() {
     console.log("wave state loaded")
   }
 
-  // resetStatus();
-  // openChannel('AHRlWrqvgCpvbd9B-Gl5vZ2F1BlpwFv0xBUwRgLF/* ...*/');
-  // doGetUserMedia();
-
 }
 // Initializes gadget after receiving a notification that the page is loaded and the DOM is ready.
 gadgets.util.registerOnLoadHandler(init);
-
-/*
-card = document.getElementById("card");
-localVideo = document.getElementById("localVideo");
-miniVideo = document.getElementById("miniVideo");
-remoteVideo = document.getElementById("remoteVideo");
-var pc = new webkitRTCPeerConnection(servers, {
-  optional: [{
-    RtpDataChannels: true
-  }]
-});
-
-pc.ondatachannel = function(event) {
-  receiveChannel = event.channel;
-  receiveChannel.onmessage = function(event) {
-    document.querySelector("div#receive").innerHTML = event.data;
-  };
-};
-
-sendChannel = pc.createDataChannel("sendDataChannel", {
-  reliable: false
-});
-
-document.querySelector("button#send").onclick = function() {
-  var data = document.querySelector("textarea#send").value;
-  sendChannel.send(data);
-};
-
-
-
-function onUserMediaSuccess(stream) {
-  console.log("User has granted access to local media.");
-  // Call the polyfill wrapper to attach the media stream to this element.
-  attachMediaStream(localVideo, stream);
-  localVideo.style.opacity = 1;
-  localStream = stream;
-  // Caller creates PeerConnection.
-  if (initiator) maybeStart();
-}
-
-function maybeStart() {
-  if (!started && localStream && channelReady) {
-    // ...
-    createPeerConnection();
-    // ...
-    pc.addStream(localStream);
-    started = true;
-    // Caller initiates offer to peer.
-    if (initiator)
-      doCall();
-  }
-}
-
-function createPeerConnection() {
-  var pc_config = {
-    "iceServers": [{
-      "url": "stun:stun.l.google.com:19302"
-    }]
-  };
-  try {
-    // Create an RTCPeerConnection via the polyfill (adapter.js).
-    pc = new RTCPeerConnection(pc_config);
-    pc.onicecandidate = onIceCandidate;
-    console.log("Created RTCPeerConnnection with config:\n" + "  \"" +
-      JSON.stringify(pc_config) + "\".");
-  } catch (e) {
-    console.log("Failed to create PeerConnection, exception: " + e.message);
-    alert("Cannot create RTCPeerConnection object; WebRTC is not supported by this browser.");
-    return;
-  }
-
-  pc.onconnecting = onSessionConnecting;
-  pc.onopen = onSessionOpened;
-  pc.onaddstream = onRemoteStreamAdded;
-  pc.onremovestream = onRemoteStreamRemoved;
-}
-
-function onRemoteStreamAdded(event) {
-  // ...
-  miniVideo.src = localVideo.src;
-  attachMediaStream(remoteVideo, event.stream);
-  remoteStream = event.stream;
-  waitForRemoteVideo();
-}
-
-function doCall() {
-  console.log("Sending offer to peer.");
-  pc.createOffer(setLocalAndSendMessage, null, mediaConstraints);
-}
-
-function setLocalAndSendMessage(sessionDescription) {
-  // Set Opus as the preferred codec in SDP if Opus is present.
-  sessionDescription.sdp = preferOpus(sessionDescription.sdp);
-  pc.setLocalDescription(sessionDescription);
-  sendMessage(sessionDescription);
-}
-
-function onIceCandidate(event) {
-  if (event.candidate) {
-    sendMessage({
-      type: 'candidate',
-      label: event.candidate.sdpMLineIndex,
-      id: event.candidate.sdpMid,
-      candidate: event.candidate.candidate
-    });
-  } else {
-    console.log("End of candidates.");
-  }
-}
-
-function sendMessage(message) {
-  var msgString = JSON.stringify(message);
-  console.log('C->S: ' + msgString);
-  wave.getState().submitDelta(message);
-  // path = '/message?r=99688636' + '&u=92246248';
-  // var xhr = new XMLHttpRequest();
-  // xhr.open('POST', path, true);
-  // xhr.send(msgString);
-}
-
-function processSignalingMessage(message) {
-  var msg = JSON.parse(message);
-
-  if (msg.type === 'offer') {
-    // Callee creates PeerConnection
-    if (!initiator && !started)
-      maybeStart();
-
-    pc.setRemoteDescription(new RTCSessionDescription(msg));
-    doAnswer();
-  } else if (msg.type === 'answer' && started) {
-    pc.setRemoteDescription(new RTCSessionDescription(msg));
-  } else if (msg.type === 'candidate' && started) {
-    var candidate = new RTCIceCandidate({
-      sdpMLineIndex: msg.label,
-      candidate: msg.candidate
-    });
-    pc.addIceCandidate(candidate);
-  } else if (msg.type === 'bye' && started) {
-    onRemoteHangup();
-  }
-}
-
-function doAnswer() {
-  console.log("Sending answer to peer.");
-  pc.createAnswer(setLocalAndSendMessage, null, mediaConstraints);
-}
-*/
