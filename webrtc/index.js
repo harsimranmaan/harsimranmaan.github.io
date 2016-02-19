@@ -137,7 +137,7 @@ function stateChangeHandler() {
   }
   var state = wave.getState();
   users = state.get('users', '[]')
-  console.log("users: ", users)
+  console.log(" state users: ", users)
 }
 
 function partcipantChangeHandler() {
@@ -148,6 +148,7 @@ function partcipantChangeHandler() {
   wave.getState().submitDelta({
     users: users
   });
+  console.log(" participant users: ", users)
 }
 
 
