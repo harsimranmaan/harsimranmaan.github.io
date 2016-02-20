@@ -115,11 +115,11 @@ function call() {
 }
 
 function gotLocalDescription(description) {
-  localPeerConnection.setLocalDescription(description);
+  localPeerConnection.setLocalDescription(new RTCSessionDescription(description));
   trace('Offer from localPeerConnection: \n' + description.sdp);
   if (wave != null) {
-    descriptions[me] = descriptions[me] || [];
-    descriptions[me].push(description);
+   // descriptions[me] = descriptions[me] || [];
+    descriptions[me] = description;
     wave.getState().submitDelta({
       'descriptions': descriptions
     });
@@ -127,9 +127,9 @@ function gotLocalDescription(description) {
 }
 
 function gotRemoteDescription(description) {
-  remotePeerConnection.setLocalDescription(description);
+  remotePeerConnection.setLocalDescription(new RTCSessionDescription(description));
   trace('Answer from remotePeerConnection: \n' + description.sdp);
-  localPeerConnection.setRemoteDescription(description);
+  localPeerConnection.setRemoteDescription(new RTCSessionDescription(description));
 }
 
 function hangup() {
@@ -203,12 +203,13 @@ function stateChangeHandler() {
   descriptions = state.get('descriptions', descriptions) || {};
 
   //only if started
-  if (users[me]) {
+  if (users.indexOf(me) >= 0) {
+    //debugger
     for (var property in candidates) {
       if (candidates.hasOwnProperty(property) && property != me && remotePeerConnection && candidates[property].length) {
-        for (var c in candidates[property]) {
-          remotePeerConnection.addIceCandidate(new RTCIceCandidate(candidates[property][candidates[property].length - 1]));
-          console.log("Setting remote candidate", candidates[property])
+        for (var i = 0; i < candidates[property].length; i++) {
+          remotePeerConnection.addIceCandidate(new RTCIceCandidate(candidates[property][i]));
+          console.log("Setting remote candidate", candidates[property][i])
         }
         break; // No conference
       }
